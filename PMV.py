@@ -4151,24 +4151,24 @@ LAPORAN_LIST = [
     ("Sektor Ekonomi", "sektor_ekonomi"),
     ("KUKB", "kukb")
 ]
-
-
+from tkinter import scrolledtext, filedialog
+import tkinter as tk
+from tkinter import ttk
+import os
+from datetime import datetime
+import glob
 
 # =============================
-# GUI APP
+# GUI APP - FIXED LENGKAP
 # =============================
 class LaporanApp(tk.Tk):
     def __init__(self):
         super().__init__()
-
-
         self.title("Generator Laporan PMV")
-        self.geometry("720x520")
-        self.resizable(False, False)
-
-
+        self.geometry("715x700")  # BESAR untuk log
+        self.resizable(True, True)  # BISA RESIZE
+        
         self.create_widgets()
-
 
     def create_widgets(self):
         # =============================
@@ -4177,13 +4177,11 @@ class LaporanApp(tk.Tk):
         frame_input = ttk.LabelFrame(self, text="Parameter")
         frame_input.pack(fill="x", padx=10, pady=10)
 
-
         # Folder Data
         ttk.Label(frame_input, text="Folder Sumber Data").grid(row=0, column=0, sticky="w")
         self.data_dir_var = tk.StringVar()
         ttk.Entry(frame_input, textvariable=self.data_dir_var, width=70).grid(row=0, column=1, padx=5)
         ttk.Button(frame_input, text="Browse", command=self.browse_data).grid(row=0, column=2)
-
 
         # Folder Output
         ttk.Label(frame_input, text="Folder Output").grid(row=1, column=0, sticky="w")
@@ -4191,26 +4189,22 @@ class LaporanApp(tk.Tk):
         ttk.Entry(frame_input, textvariable=self.output_dir_var, width=70).grid(row=1, column=1, padx=5)
         ttk.Button(frame_input, text="Browse", command=self.browse_output).grid(row=1, column=2)
 
-
-        # Folder Data Referensi (BARU)
-        ttk.Label(frame_input, text="Folder Data Ref.").grid(row=3, column=0, sticky="w", pady=2)
+        # Folder Data Referensi
+        ttk.Label(frame_input, text="Folder Data Ref.").grid(row=2, column=0, sticky="w", pady=2)
         self.ref_dir_var = tk.StringVar()
-        ttk.Entry(frame_input, textvariable=self.ref_dir_var, width=70).grid(row=3, column=1, padx=5, pady=2)
-        ttk.Button(frame_input, text="Browse", command=self.browse_ref).grid(row=3, column=2, pady=2)
-
+        ttk.Entry(frame_input, textvariable=self.ref_dir_var, width=70).grid(row=2, column=1, padx=5, pady=2)
+        ttk.Button(frame_input, text="Browse", command=self.browse_ref).grid(row=2, column=2, pady=2)
 
         # Period
-        ttk.Label(frame_input, text="Periode").grid(row=2, column=0, sticky="w")
+        ttk.Label(frame_input, text="Nama File Laporan").grid(row=4, column=0, sticky="w")
         self.period_var = tk.StringVar()
-        ttk.Entry(frame_input, textvariable=self.period_var, width=20).grid(row=2, column=1, sticky="w", padx=5)
-
+        ttk.Entry(frame_input, textvariable=self.period_var, width=40).grid(row=4, column=1, sticky="w", padx=5)
 
         # =============================
         # FRAME LAPORAN
         # =============================
         frame_laporan = ttk.LabelFrame(self, text="Jenis Laporan")
         frame_laporan.pack(fill="x", padx=10, pady=5)
-
 
         self.laporan_vars = {}
         for i, (label, key) in enumerate(LAPORAN_LIST):
@@ -4219,24 +4213,51 @@ class LaporanApp(tk.Tk):
             chk.grid(row=i // 2, column=i % 2, sticky="w", padx=10, pady=2)
             self.laporan_vars[key] = var
 
-
         # =============================
         # BUTTON
         # =============================
-        ttk.Button(self, text="▶ Proses Laporan", command=self.run_process)\
-            .pack(pady=10)
-
+        button_frame = ttk.Frame(self)
+        button_frame.pack(fill="x", padx=10, pady=10)
+        ttk.Button(button_frame, text="▶ Proses Laporan", command=self.run_process).pack(side=tk.LEFT)
+        ttk.Button(button_frame, text="🗑️ Clear Log", command=self.clear_log).pack(side=tk.LEFT, padx=5)
 
         # =============================
-        # LOG
+        # LOG SECTION - SCROLLABLE BESAR
         # =============================
-        frame_log = ttk.LabelFrame(self, text="Log Proses")
-        frame_log.pack(fill="both", expand=True, padx=10, pady=5)
+        self.create_log_section()
 
+    def create_log_section(self):
+        """Log scrollable BESAR dengan clear button"""
+        self.log_frame = ttk.LabelFrame(self, text="📋 Log Proses Laporan", padding=5)
+        self.log_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0,10))
+        
+        # ScrolledText BESAR
+        self.log_text = scrolledtext.ScrolledText(
+            self.log_frame,
+            height=25,
+            width=100,
+            font=("Consolas", 10),
+            wrap=tk.WORD,
+            bg="#f8f9fa",
+            fg="#2c3e50",
+            state='normal'
+        )
+        self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        self.log_text = tk.Text(frame_log, height=10)
-        self.log_text.pack(fill="both", expand=True)
+    def log(self, message):
+        """Log dengan auto-scroll"""
+        self.log_text.config(state='normal')
+        self.log_text.insert(tk.END, message + "\n")
+        self.log_text.see(tk.END)  # Auto-scroll ke bawah
+        self.log_text.config(state='disabled')
+        self.log_text.update()
 
+    def clear_log(self):
+        """Clear semua log"""
+        self.log_text.config(state='normal')
+        self.log_text.delete(1.0, tk.END)
+        self.log_text.config(state='disabled')
+        self.log("🗑️ Log di-clear - Siap proses baru!")
 
     # =============================
     # HANDLER
@@ -4246,86 +4267,114 @@ class LaporanApp(tk.Tk):
         if folder:
             self.data_dir_var.set(folder)
 
-
     def browse_output(self):
         folder = filedialog.askdirectory()
         if folder:
             self.output_dir_var.set(folder)
-
 
     def browse_ref(self):
         folder = filedialog.askdirectory()
         if folder:
             self.ref_dir_var.set(folder)
 
-
-    def log(self, msg):
-        self.log_text.insert("end", msg + "\n")
-        self.log_text.see("end")
-        self.update()
-
-
     def run_process(self):
+        from datetime import datetime
+        import glob
+        
+        self.log("\n🚀 MULAI GENERATE KK PMV")
+        self.log("⏱️  Mulai: " + datetime.now().strftime("%H:%M:%S"))
+        self.log("=" * 65)
+        
+        # INPUT & FOLDER
         data_dir = self.data_dir_var.get()
-        ref_dir = self.ref_dir_var.get()  # BARU
+        ref_dir = self.ref_dir_var.get()
         base_dir = self.output_dir_var.get()
         period = self.period_var.get()
-
-         # Get SCRIPT DIRECTORY
-        script_dir = os.path.join(APP_DIR, "data") 
-
-        if not data_dir or not ref_dir or not base_dir or not period:  # UPDATE validasi
-            messagebox.showerror("Error", "Semua parameter wajib diisi")
+        
+        if not all([data_dir, ref_dir, base_dir, period]):
+            self.log("❌ SEMUA FIELD WAJIB DIISI!")
             return
-
-
-        laporan_dir = os.path.join(base_dir, f"Laporan {period}")
+        
+        script_dir = os.path.join(APP_DIR, "data")
+        laporan_dir = os.path.join(base_dir, f"{period}")
+        
+        # BUAT FOLDER
+        os.makedirs(script_dir, exist_ok=True)
         os.makedirs(laporan_dir, exist_ok=True)
-
-
-        self.log("🚀 Mulai proses laporan...\n")
-
-
-        # ===========================
-        # PROSES 1: LAPORAN UTAMA (existing)
-        # ===========================
-        for laporan, var in self.laporan_vars.items():
-            if var.get():
-                try:
-                    self.log(f"▶ Memproses {laporan} ...")
-                    proses_laporan_config(
-                        laporan, data_dir, laporan_dir, period
-                    )
-                    self.log(f"✅ {laporan} selesai\n")
-                except Exception as e:
-                    self.log(f"❌ {laporan} gagal: {e}\n")
-
-
-        # ===========================
-        # PROSES 2: LAPORAN DATA REF (BARU)
-        # ===========================
+        
+        # STEP 1: VALIDASI DATA SOURCE
+        self.log("📂 1. Validasi data PMV...")
+        if not os.path.exists(data_dir):
+            self.log(f"   ❌ Folder hilang: {os.path.basename(data_dir)}")
+            return
+        
+        self.log(f"   📁 Folder OK: {os.path.basename(data_dir)}")
+        
+        # CEK FORM + PIUTANG TERPISAH
+        forms = ["1100", "1200", "1300", "1110", "5310", "0043", "0041"]
+        piutang_forms = ["2110", "2120", "2130", "2140"]
+        
+        self.log("   📋 File PMV ditemukan:")
+        total_files = 0
+        
+        for form in forms:
+            files = glob.glob(os.path.join(data_dir, f"{form}*.xlsx"))
+            total_files += len(files)
+            self.log(f"      {form}: {'✓' if files else '✗'} ({len(files)} file)")
+        
+        self.log("   📋 Piutang dan CKPN (source Tarikan Data {period}):")
+        for form in piutang_forms:
+            files = glob.glob(os.path.join(data_dir, f"{form}*.xlsx"))
+            total_files += len(files)
+            self.log(f"      {form}: {'✓' if files else '✗'} ({len(files)} file)")
+        
+        valas_files = glob.glob(os.path.join(data_dir, "2550*.xlsx"))
+        total_files += len(valas_files)
+        self.log(f"      2550: {'✓' if valas_files else '✗'} ({len(valas_files)} file)")
+        
+        self.log(f"   📊 Total: {total_files} file PMV ✓")
+        
+        # STEP 2: OLAH DATA
+        self.log("\n📊 2. Olah Data Piutang dan CKPN & Pinjaman Valas...")
         try:
-            self.log("📊 Preprocessing data referensi...")
-            # ✅ BENAR
             data_ref = preprocess_data(data_dir, script_dir, TEMPLATE_DIR)
-            df_piutang = data_ref["piutang"]
-            df_perusahaan = data_ref["perusahaan"]
-            df_pinjaman_valas = data_ref["valas"]
-
-            self.log("✅ Preprocessing selesai\n")
-           
-            # Jalankan semua laporan data ref
-            self.log("📈 Generate laporan tambahan...")
-            run_all_ref_laporan(laporan_dir, df_perusahaan, df_piutang, df_pinjaman_valas)
-            self.log("✅ Semua laporan tambahan selesai\n")
-           
+            self.log(f"   ✅ Data Piutang dan CKPN: {len(data_ref['piutang']):,} baris ✓")
+            self.log(f"   ✅ Data Perusahaan: {len(data_ref['perusahaan']):,} baris ✓")
+            self.log(f"   ✅ Data Valas: {len(data_ref['valas']):,} baris ✓")
         except Exception as e:
-            self.log(f"❌ Laporan data ref gagal: {e}\n")
-
-
-        messagebox.showinfo("Selesai", "Semua laporan selesai diproses")
-
-
+            self.log(f"   ❌ Olah data gagal: {str(e)}")
+            return
+        
+        # STEP 3: SEMUA LAPORAN
+        self.log("\n📋 3. Generate KK PMV...")
+        selesai = 0
+        
+        for laporan_name, config in LAPORAN_CONFIG.items():
+            if self.laporan_vars[laporan_name].get():
+                form_code = config["form"]
+                self.log(f"   📄 {laporan_name.replace('_',' ').title()} (form {form_code})...")
+                try:
+                    proses_laporan_config(laporan_name, data_dir, laporan_dir, period)
+                    selesai += 1
+                    self.log(f"      ✅ {config['output_folder']} OK")
+                except Exception as e:
+                    self.log(f"      ❌ {laporan_name}: {str(e)}")
+        
+        self.log("   📊 Laporan NPF s.d. KUKB ...")
+        if not data_ref['piutang'].empty and not data_ref['perusahaan'].empty:
+            try:
+                run_all_ref_laporan(laporan_dir, data_ref["perusahaan"], data_ref["piutang"], data_ref["valas"])
+                selesai += 1
+                self.log("      ✅ Laporan NPF s.d. KUKB OK")
+            except Exception as e:
+                self.log(f"      ❌ Laporan NPF s.d. KUKB: {str(e)}")
+        
+        # SUMMARY
+        self.log("\n" + "="*65)
+        self.log("🎉 KK PMV LENGKAP SELESAI!")
+        self.log(f"📁 Folder: {laporan_dir}")
+        self.log(f"📄 Total laporan: {selesai} file")
+        self.log("⏱️  Selesai: " + datetime.now().strftime("%H:%M:%S"))
 
 # =============================
 # RUN
